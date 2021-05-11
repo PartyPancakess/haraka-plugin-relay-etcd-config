@@ -49,6 +49,41 @@ exports.load_acls = function () {
       else console.log("Something went wrong while reading config/mta/domains/... from Etcd. You may want to check the relay-etcd-config plugin.");
     });
 
+
+    etcdClient.watch()
+    .prefix('config/mta/domains/')
+    .create()
+    .then(watcher => {
+        watcher
+        .on('disconnected', () => console.log('disconnected...'))
+        .on('connected', () => console.log('successfully reconnected!'))
+        .on('put', res => {
+            if (res.key.toString().substr(res.key.toString().length-7) === "/relays") {          
+                const changed_key = res.key.toString();
+                domain_list[changed_key] = res.value.toString();
+
+                domain_list[changed_key].split('\n').forEach(function(ip) {
+                    if (ip) {
+                        const cidr = ip.split('/');
+                        if (!net.isIP(cidr[0])) {
+                            plugin.logerror(plugin, `invalid entry in Etcd key ${changed_key}: ${cidr[0]}`);
+                        }
+                        if (!cidr[1]) {
+                            plugin.logerror(plugin, `appending missing CIDR suffix in: ${changed_key}`);
+                        }
+                    }
+                });
+            }
+        })
+        .on('delete', res => {
+            if (res.key.toString().substr(res.key.toString().length-7) === "/relays") {  
+                const changed_key = res.key.toString();
+                delete domain_list[changed_key];
+            }
+            
+        });
+    });
+
 }
 
 exports.acl = function (next, connection, params) {
@@ -78,6 +113,8 @@ exports.is_acl_allowed = function (connection, target) {
     if (domain_list === {}) { return false; }
 
     const ip = connection.remote.ip;
+
+    if(!domain_list[target]) return false;
 
     const list = domain_list[target].split('\n');
 
