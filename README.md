@@ -7,7 +7,7 @@ It gets its ACL list from etcd server.
 
 
 ## Configuration
-Running etcd server must have key(s) in the config/mta/domains/\<domain>/relay format.
+Running etcd server must have key(s) in the config/mta/domains/\<domain>/relays format.
 Relays must be added to every domain separately.
 
 ### Example etcd Configuration
@@ -17,7 +17,7 @@ For every user:
 \<IP or Subnet in CIDR format>\<CRLF>
 
 ```
-etcdctl put config/mta/domains/domain.com/relay "10.10.10.10/32
+etcdctl put config/mta/domains/domain.com/relays "10.10.10.10/32
 10.10.10.0/24
 "
 ```
